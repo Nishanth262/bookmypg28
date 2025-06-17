@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String     @id @default(cuid())
+  name       String
+  email      String?    @unique
+  phone      String     @unique
+  avatar     String?
+  role       Role       @default(USER)
+  isVerified Boolean    @default(false)
+  isBlocked  Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  bookings   Booking[]
+  otpCodes   OtpCode[]
+  properties Property[]
+  reviews    Review[]
+
+  @@index([role])
+  @@index([isBlocked])
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  type      OtpType
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([phone, type])
+}
+
+model Property {
+  id                   String         @id @default(cuid())
+  title                String
+  description          String
+  address              String
+  city                 String
+  state                String
+  stateId              String
+  district             String
+  districtId           String
+  pincode              String
+  singleRooms          Int            @default(0)
+  doubleRooms          Int            @default(0)
+  tripleRooms          Int            @default(0)
+  quadRooms            Int            @default(0)
+  availableSingleRooms Int            @default(0)
+  availableDoubleRooms Int            @default(0)
+  availableTripleRooms Int            @default(0)
+  availableQuadRooms   Int            @default(0)
+  totalCapacity        Int            @default(0)
+  occupiedCapacity     Int            @default(0)
+  singlePrice          Float          @default(0)
+  doublePrice          Float          @default(0)
+  triplePrice          Float          @default(0)
+  quadPrice            Float          @default(0)
+  deposit              Float
+  amenities            String[]
+  images               String[]
+  type                 RoomType       @default(SINGLE)
+  capacity             Int            @default(1)
+  price                Float          @default(0)
+  rating               Float          @default(0)
+  reviewCount          Int            @default(0)
+  available            Boolean        @default(true)
+  featured             Boolean        @default(false)
+  status               PropertyStatus @default(PENDING)
+  rejectionReason      String?
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  ownerId              String
+  bookings             Booking[]
+  owner                User           @relation(fields: [ownerId], references: [id])
+  reviews              Review[]
+
+  @@index([stateId, districtId])
+  @@index([city, state])
+  @@index([status])
+  @@index([available])
+}
+
+model Booking {
+  id             String        @id @default(cuid())
+  startMonth     Int
+  startYear      Int
+  durationMonths Int
+  startDate      DateTime
+  endDate        DateTime
+  roomType       RoomType
+  totalAmount    Float
+  monthlyAmount  Float
+  status         BookingStatus @default(PENDING)
+  paymentStatus  PaymentStatus @default(PENDING)
+  paymentMethod  String?
+  paymentId      String?
+  isActive       Boolean       @default(true)
+  isExpired      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  propertyId     String
+  userId         String
+  property       Property      @relation(fields: [propertyId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+
+  @@index([startDate, endDate])
+  @@index([isActive, isExpired])
+  @@index([status])
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  rating     Int
+  comment    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  propertyId String
+  userId     String
+  property   Property @relation(fields: [propertyId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model SystemMetrics {
+  id              String   @id @default(cuid())
+  totalUsers      Int      @default(0)
+  totalOwners     Int      @default(0)
+  totalProperties Int      @default(0)
+  totalBookings   Int      @default(0)
+  activeBookings  Int      @default(0)
+  revenue         Float    @default(0)
+  date            DateTime @default(now())
+
+  @@index([date])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isGlobal  Boolean          @default(false)
+  userId    String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead])
+  @@index([isGlobal])
+}
+
+enum Role {
+  USER
+  OWNER
+  ADMIN
+}
+
+enum RoomType {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  QUAD
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PropertyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  BLOCKED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
+
+enum OtpType {
+  LOGIN
+  SIGNUP
+  FORGOT_PASSWORD
+}
