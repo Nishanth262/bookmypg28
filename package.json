@@ -12,7 +12,8 @@
     "dev:server": "nodemon server/index.js"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
+    "@prisma/client": "^6.10.0",
+    "@prisma/extension-accelerate": "^2.0.1",
     "@radix-ui/react-dialog": "^1.0.5",
     "@radix-ui/react-popover": "^1.0.7",
     "@radix-ui/react-slot": "^1.0.2",

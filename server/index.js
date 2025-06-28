@@ -10,7 +10,7 @@ import cron from 'node-cron';
 import authRoutes from './routes/auth.js';
 import propertyRoutes from './routes/properties.js';
 import bookingRoutes from './routes/bookings.js';
-import userRoutes from './routes/users.js';
+//import userRoutes from './routes/users.js';
 import adminRoutes from './routes/admin.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { authenticateToken } from './middleware/auth.js';
@@ -39,7 +39,7 @@ app.use(limiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
 app.use('/api/bookings', authenticateToken, bookingRoutes);
-app.use('/api/users', authenticateToken, userRoutes);
+//app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Error handling
@@ -72,3 +72,8 @@ process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
