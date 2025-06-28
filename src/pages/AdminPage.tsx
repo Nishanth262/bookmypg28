@@ -91,7 +91,7 @@ const AdminPage: React.FC = () => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch('http://localhost:5000/api/admin/dashboard', {
+      const response = await fetch('/api/admin/dashboard', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -112,7 +112,7 @@ const AdminPage: React.FC = () => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch('http://localhost:5000/api/admin/users', {
+      const response = await fetch('/api/admin/users', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -133,7 +133,7 @@ const AdminPage: React.FC = () => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch('http://localhost:5000/api/admin/properties', {
+      const response = await fetch('/api/admin/properties', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -153,7 +153,7 @@ const AdminPage: React.FC = () => {
   const toggleUserBlock = async (userId: string, isBlocked: boolean) => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/block`, {
+      const response = await fetch(`/api/admin/users/${userId}/block`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -173,7 +173,7 @@ const AdminPage: React.FC = () => {
   const updatePropertyStatus = async (propertyId: string, status: string, rejectionReason?: string) => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`http://localhost:5000/api/admin/properties/${propertyId}/status`, {
+      const response = await fetch(`/api/admin/properties/${propertyId}/status`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -195,7 +195,7 @@ const AdminPage: React.FC = () => {
   const sendGlobalNotification = async () => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch('http://localhost:5000/api/admin/notifications/global', {
+      const response = await fetch('/api/admin/notifications/global', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

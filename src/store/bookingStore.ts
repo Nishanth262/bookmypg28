@@ -14,7 +14,7 @@ interface BookingState {
   setCurrentBooking: (booking: Booking | null) => void
 }
 
-const API_BASE_URL = 'http://localhost:5000/api'
+const API_BASE_URL = '/api'
 
 export const useBookingStore = create<BookingState>((set, get) => ({
   bookings: [],
