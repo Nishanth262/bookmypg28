@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { FeaturedProperties } from '../components/property/FeaturedProperties'
+import { NearbyProperties } from '../components/property/NearbyProperties'
 import { PropertySearch } from '../components/property/PropertySearch'
 import { Button } from '../components/ui/button'
 import { Link } from 'react-router-dom'
@@ -85,6 +86,9 @@ const HomePage: React.FC = () => {
 
         {/* Search Box */}
         <PropertySearch />
+
+        {/* Nearby Properties Section */}
+        <NearbyProperties />
 
         {/* Featured Properties Section */}
         <FeaturedProperties />

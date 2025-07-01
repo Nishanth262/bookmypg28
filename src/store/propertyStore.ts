@@ -22,14 +22,14 @@ interface PropertyState {
   getFilteredProperties: () => Property[]
 }
 
-// Enhanced mock properties data with multiple room types
+// Enhanced mock properties data with multiple room types and coordinates
 const mockProperties: Property[] = [
   {
     id: '1',
     title: 'Modern PG with Multiple Room Options',
     description: 'A modern, well-ventilated PG accommodation with various room sharing options. Includes all utilities and high-speed WiFi. Close to major tech parks.',
     address: '123 Koramangala Main Road',
-    city: 'Bangalore',
+    city: 'Koramangala',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -41,6 +41,12 @@ const mockProperties: Property[] = [
     doubleRooms: 8,
     tripleRooms: 4,
     quadRooms: 2,
+    availableSingleRooms: 3,
+    availableDoubleRooms: 6,
+    availableTripleRooms: 2,
+    availableQuadRooms: 1,
+    totalCapacity: 38,
+    occupiedCapacity: 19,
     
     // Room pricing
     singlePrice: 15000,
@@ -68,6 +74,7 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: true,
+    status: 'APPROVED',
     createdAt: new Date('2023-10-15')
   },
   {
@@ -75,7 +82,7 @@ const mockProperties: Property[] = [
     title: 'Budget Friendly PG in HSR Layout',
     description: 'Affordable accommodation with multiple sharing options. Perfect for students and working professionals.',
     address: '45 HSR Layout',
-    city: 'Bangalore',
+    city: 'HSR Layout',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -87,6 +94,12 @@ const mockProperties: Property[] = [
     doubleRooms: 10,
     tripleRooms: 8,
     quadRooms: 5,
+    availableSingleRooms: 1,
+    availableDoubleRooms: 7,
+    availableTripleRooms: 5,
+    availableQuadRooms: 3,
+    totalCapacity: 57,
+    occupiedCapacity: 25,
     
     // Room pricing
     singlePrice: 12000,
@@ -113,6 +126,7 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: false,
+    status: 'APPROVED',
     createdAt: new Date('2023-11-05')
   },
   {
@@ -120,7 +134,7 @@ const mockProperties: Property[] = [
     title: 'Premium PG in Indiranagar',
     description: 'Luxurious accommodation with premium amenities. Multiple room options available.',
     address: '78 Indiranagar',
-    city: 'Bangalore',
+    city: 'Indiranagar',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -132,6 +146,12 @@ const mockProperties: Property[] = [
     doubleRooms: 6,
     tripleRooms: 3,
     quadRooms: 1,
+    availableSingleRooms: 5,
+    availableDoubleRooms: 4,
+    availableTripleRooms: 2,
+    availableQuadRooms: 1,
+    totalCapacity: 32,
+    occupiedCapacity: 20,
     
     // Room pricing
     singlePrice: 18000,
@@ -158,14 +178,15 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: true,
+    status: 'APPROVED',
     createdAt: new Date('2023-09-20')
   },
   {
     id: '4',
     title: 'Student PG in BTM Layout',
     description: 'Affordable accommodation designed for students. Multiple sharing options available.',
-    address: '34  BTM Layout',
-    city: 'Bangalore',
+    address: '34 BTM Layout',
+    city: 'BTM Layout',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -177,6 +198,12 @@ const mockProperties: Property[] = [
     doubleRooms: 5,
     tripleRooms: 10,
     quadRooms: 8,
+    availableSingleRooms: 0,
+    availableDoubleRooms: 3,
+    availableTripleRooms: 7,
+    availableQuadRooms: 6,
+    totalCapacity: 64,
+    occupiedCapacity: 32,
     
     // Room pricing
     singlePrice: 10000,
@@ -203,6 +230,7 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: false,
+    status: 'APPROVED',
     createdAt: new Date('2023-12-10')
   },
   {
@@ -210,7 +238,7 @@ const mockProperties: Property[] = [
     title: 'Executive PG in Whitefield',
     description: 'Premium accommodation for working professionals with various room configurations.',
     address: '56 Whitefield',
-    city: 'Bangalore',
+    city: 'Whitefield',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -222,6 +250,12 @@ const mockProperties: Property[] = [
     doubleRooms: 8,
     tripleRooms: 4,
     quadRooms: 2,
+    availableSingleRooms: 8,
+    availableDoubleRooms: 6,
+    availableTripleRooms: 3,
+    availableQuadRooms: 2,
+    totalCapacity: 46,
+    occupiedCapacity: 27,
     
     // Room pricing
     singlePrice: 16000,
@@ -248,6 +282,7 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: true,
+    status: 'APPROVED',
     createdAt: new Date('2023-08-15')
   },
   {
@@ -255,7 +290,7 @@ const mockProperties: Property[] = [
     title: 'Co-living Space in Electronic City',
     description: 'Modern co-living space with shared facilities and multiple room options.',
     address: '90 Electronic City',
-    city: 'Bangalore',
+    city: 'Electronic City',
     state: 'Karnataka',
     stateId: 'karnataka',
     district: 'Bengaluru Urban',
@@ -267,6 +302,12 @@ const mockProperties: Property[] = [
     doubleRooms: 12,
     tripleRooms: 8,
     quadRooms: 6,
+    availableSingleRooms: 4,
+    availableDoubleRooms: 9,
+    availableTripleRooms: 6,
+    availableQuadRooms: 4,
+    totalCapacity: 66,
+    occupiedCapacity: 43,
     
     // Room pricing
     singlePrice: 14000,
@@ -293,6 +334,7 @@ const mockProperties: Property[] = [
     ownerAvatar: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150',
     available: true,
     featured: false,
+    status: 'APPROVED',
     createdAt: new Date('2023-10-30')
   }
 ]
@@ -362,13 +404,13 @@ export const usePropertyStore = create<PropertyState>((set, get) => ({
         const hasRequestedRoomType = filters.roomTypes.some(roomType => {
           switch (roomType) {
             case 'SINGLE':
-              return property.singleRooms > 0
+              return property.availableSingleRooms > 0
             case 'DOUBLE':
-              return property.doubleRooms > 0
+              return property.availableDoubleRooms > 0
             case 'TRIPLE':
-              return property.tripleRooms > 0
+              return property.availableTripleRooms > 0
             case 'QUAD':
-              return property.quadRooms > 0
+              return property.availableQuadRooms > 0
             default:
               return false
           }
