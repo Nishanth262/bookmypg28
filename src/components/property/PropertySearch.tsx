@@ -1,35 +1,235 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { PropertyType } from '../../lib/types'
 import { INDIAN_STATES, getDistrictsByStateId } from '../../data/locations'
+import { usePropertyStore } from '../../store/propertyStore'
 import { 
   Search, 
   MapPin, 
   Users, 
   Banknote,
   Filter,
-  X
+  X,
+  Clock,
+  TrendingUp
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 
+interface SearchSuggestion {
+  id: string
+  type: 'location' | 'property' | 'amenity' | 'recent'
+  title: string
+  subtitle?: string
+  icon: React.ReactNode
+}
+
 export const PropertySearch: React.FC = () => {
   const navigate = useNavigate()
+  const { properties } = usePropertyStore()
   const [searchQuery, setSearchQuery] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([])
   const [selectedState, setSelectedState] = useState('')
   const [selectedDistrict, setSelectedDistrict] = useState('')
   const [priceRange, setPriceRange] = useState('')
   const [roomType, setRoomType] = useState('')
+  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const suggestionsRef = useRef<HTMLDivElement>(null)
+
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('recentSearches')
+    if (saved) {
+      setRecentSearches(JSON.parse(saved))
+    }
+  }, [])
+
+  // Generate suggestions based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      // Show recent searches and popular suggestions when no query
+      const recentSuggestions: SearchSuggestion[] = recentSearches.slice(0, 3).map((search, index) => ({
+        id: `recent-${index}`,
+        type: 'recent',
+        title: search,
+        icon: <Clock className="h-4 w-4" />
+      }))
+
+      const popularSuggestions: SearchSuggestion[] = [
+        {
+          id: 'popular-1',
+          type: 'location',
+          title: 'Koramangala',
+          subtitle: 'Bangalore, Karnataka',
+          icon: <MapPin className="h-4 w-4" />
+        },
+        {
+          id: 'popular-2',
+          type: 'location',
+          title: 'HSR Layout',
+          subtitle: 'Bangalore, Karnataka',
+          icon: <MapPin className="h-4 w-4" />
+        },
+        {
+          id: 'popular-3',
+          type: 'amenity',
+          title: 'WiFi',
+          subtitle: 'Properties with WiFi',
+          icon: <TrendingUp className="h-4 w-4" />
+        },
+        {
+          id: 'popular-4',
+          type: 'amenity',
+          title: 'Single Sharing',
+          subtitle: 'Single occupancy rooms',
+          icon: <Users className="h-4 w-4" />
+        }
+      ]
+
+      setSuggestions([...recentSuggestions, ...popularSuggestions])
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+    const newSuggestions: SearchSuggestion[] = []
+
+    // Location suggestions (cities, areas)
+    const locationSuggestions = [
+      'Koramangala', 'HSR Layout', 'Indiranagar', 'BTM Layout', 'Whitefield', 
+      'Electronic City', 'Marathahalli', 'Jayanagar', 'Rajajinagar', 'Malleshwaram',
+      'Yelahanka', 'Hebbal', 'Sarjapur', 'Bellandur', 'Bommanahalli'
+    ].filter(location => location.toLowerCase().includes(query))
+     .slice(0, 4)
+     .map(location => ({
+       id: `location-${location}`,
+       type: 'location' as const,
+       title: location,
+       subtitle: 'Bangalore, Karnataka',
+       icon: <MapPin className="h-4 w-4" />
+     }))
+
+    newSuggestions.push(...locationSuggestions)
+
+    // Property name suggestions
+    const propertySuggestions = properties
+      .filter(property => 
+        property.title.toLowerCase().includes(query) ||
+        property.address.toLowerCase().includes(query)
+      )
+      .slice(0, 3)
+      .map(property => ({
+        id: `property-${property.id}`,
+        type: 'property' as const,
+        title: property.title,
+        subtitle: `${property.city}, ${property.state}`,
+        icon: <MapPin className="h-4 w-4" />
+      }))
+
+    newSuggestions.push(...propertySuggestions)
+
+    // Amenity suggestions
+    const amenitySuggestions = [
+      'WiFi', 'AC', 'TV', 'Gym', 'Food', 'Laundry', 'Parking', 'Security',
+      'Power Backup', 'Housekeeping', 'Kitchen', 'Washing Machine'
+    ].filter(amenity => amenity.toLowerCase().includes(query))
+     .slice(0, 3)
+     .map(amenity => ({
+       id: `amenity-${amenity}`,
+       type: 'amenity' as const,
+       title: amenity,
+       subtitle: `Properties with ${amenity}`,
+       icon: <TrendingUp className="h-4 w-4" />
+     }))
+
+    newSuggestions.push(...amenitySuggestions)
+
+    // Room type suggestions
+    const roomTypeSuggestions = [
+      { key: 'single', label: 'Single Sharing', value: 'SINGLE' },
+      { key: 'double', label: '2 Sharing', value: 'DOUBLE' },
+      { key: 'triple', label: '3 Sharing', value: 'TRIPLE' },
+      { key: 'quad', label: '4 Sharing', value: 'QUAD' }
+    ].filter(room => 
+      room.label.toLowerCase().includes(query) || 
+      room.key.includes(query)
+    ).slice(0, 2)
+     .map(room => ({
+       id: `room-${room.key}`,
+       type: 'amenity' as const,
+       title: room.label,
+       subtitle: 'Room type',
+       icon: <Users className="h-4 w-4" />
+     }))
+
+    newSuggestions.push(...roomTypeSuggestions)
+
+    setSuggestions(newSuggestions.slice(0, 8))
+  }, [searchQuery, properties, recentSearches])
+
+  // Handle click outside to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(event.target as Node) &&
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const saveRecentSearch = (query: string) => {
+    if (!query.trim()) return
+    
+    const updated = [query, ...recentSearches.filter(s => s !== query)].slice(0, 5)
+    setRecentSearches(updated)
+    localStorage.setItem('recentSearches', JSON.stringify(updated))
+  }
 
   const handleQuickSearch = (e: React.FormEvent) => {
     e.preventDefault()
     
     if (!searchQuery.trim()) return
     
+    saveRecentSearch(searchQuery.trim())
+    setShowSuggestions(false)
+    
     const params = new URLSearchParams()
     params.append('search', searchQuery.trim())
+    
+    navigate({
+      pathname: '/properties',
+      search: params.toString()
+    })
+  }
+
+  const handleSuggestionClick = (suggestion: SearchSuggestion) => {
+    setSearchQuery(suggestion.title)
+    setShowSuggestions(false)
+    saveRecentSearch(suggestion.title)
+    
+    const params = new URLSearchParams()
+    
+    if (suggestion.type === 'property') {
+      // Navigate directly to property
+      const property = properties.find(p => p.title === suggestion.title)
+      if (property) {
+        navigate(`/property/${property.id}`)
+        return
+      }
+    }
+    
+    params.append('search', suggestion.title)
     
     navigate({
       pathname: '/properties',
@@ -42,7 +242,10 @@ export const PropertySearch: React.FC = () => {
     
     const params = new URLSearchParams()
     
-    if (searchQuery.trim()) params.append('search', searchQuery.trim())
+    if (searchQuery.trim()) {
+      params.append('search', searchQuery.trim())
+      saveRecentSearch(searchQuery.trim())
+    }
     if (selectedState) params.append('stateId', selectedState)
     if (selectedDistrict) params.append('districtId', selectedDistrict)
     if (roomType) params.append('roomTypes', roomType)
@@ -52,6 +255,7 @@ export const PropertySearch: React.FC = () => {
       if (max) params.append('priceMax', max)
     }
     
+    setShowSuggestions(false)
     navigate({
       pathname: '/properties',
       search: params.toString()
@@ -65,6 +269,7 @@ export const PropertySearch: React.FC = () => {
     setPriceRange('')
     setRoomType('')
     setShowAdvanced(false)
+    setShowSuggestions(false)
   }
 
   const availableDistricts = selectedState ? getDistrictsByStateId(selectedState) : []
@@ -94,20 +299,90 @@ export const PropertySearch: React.FC = () => {
               <Search className="h-5 w-5 text-gray-400" />
             </div>
             <Input
+              ref={searchInputRef}
               type="text"
               placeholder="Search by city, area, or PG name (e.g., Koramangala, HSR Layout)"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setShowSuggestions(true)}
               className="pl-12 h-12 text-base border-2 border-gray-200 focus:border-primary-500 rounded-lg"
+              autoComplete="off"
             />
+            
+            {/* Search Suggestions Dropdown */}
+            <AnimatePresence>
+              {showSuggestions && suggestions.length > 0 && (
+                <motion.div
+                  ref={suggestionsRef}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto"
+                >
+                  {!searchQuery.trim() && recentSearches.length > 0 && (
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                          Recent Searches
+                        </span>
+                        <button
+                          onClick={() => {
+                            setRecentSearches([])
+                            localStorage.removeItem('recentSearches')
+                          }}
+                          className="text-xs text-gray-400 hover:text-gray-600"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {suggestions.map((suggestion, index) => (
+                    <motion.button
+                      key={suggestion.id}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center space-x-3 transition-colors"
+                    >
+                      <div className="text-gray-400">
+                        {suggestion.icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 truncate">
+                          {suggestion.title}
+                        </div>
+                        {suggestion.subtitle && (
+                          <div className="text-xs text-gray-500 truncate">
+                            {suggestion.subtitle}
+                          </div>
+                        )}
+                      </div>
+                      {suggestion.type === 'recent' && (
+                        <div className="text-xs text-gray-400">
+                          Recent
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                  
+                  {!searchQuery.trim() && (
+                    <div className="px-4 py-2 border-t border-gray-100">
+                      <span className="text-xs text-gray-500">
+                        Popular searches and recent activity
+                      </span>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           
           <div className="flex gap-2">
-            <Button 
-              type="submit" 
-              size="lg"
-              className="h-12 px-8 bg-primary-600 hover:bg-primary-700"
-            >
+            <Button type="submit" size="lg" className="h-12 px-8 bg-primary-600 hover:bg-primary-700">
               <Search className="h-5 w-5 mr-2" />
               Search
             </Button>
@@ -265,6 +540,7 @@ export const PropertySearch: React.FC = () => {
               key={suggestion}
               onClick={() => {
                 setSearchQuery(suggestion)
+                setShowSuggestions(false)
                 const params = new URLSearchParams()
                 params.append('search', suggestion)
                 navigate({
