@@ -1,39 +1,30 @@
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
-import otpService from '../services/otpService.js';
+import emailService from '../services/emailService.js';
 
 const prisma = new PrismaClient();
 
 // Send OTP for login
 export const sendLoginOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { email } = req.body;
 
-    if (!phone) {
-      return res.status(400).json({ message: 'Phone number is required' });
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required' });
     }
 
-    // Clean phone number - remove spaces, dashes, and ensure proper format
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    
-    // Validate phone number format (basic validation)
-    const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
-    if (!phoneRegex.test(cleanPhone)) {
-      return res.status(400).json({ message: 'Invalid phone number format. Please enter a valid Indian mobile number.' });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format. Please enter a valid email address.' });
     }
 
-    // Normalize phone number
-    let normalizedPhone = cleanPhone;
-    if (normalizedPhone.startsWith('+91')) {
-      normalizedPhone = normalizedPhone.substring(3);
-    } else if (normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    normalizedPhone = '+91' + normalizedPhone;
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user exists
     const user = await prisma.user.findUnique({ 
-      where: { phone: normalizedPhone } 
+      where: { email: normalizedEmail } 
     });
     
     if (!user) {
@@ -51,12 +42,12 @@ export const sendLoginOtp = async (req, res) => {
     }
 
     // Generate and send OTP
-    const otpRecord = await otpService.createOtp(normalizedPhone, 'LOGIN', user.id);
-    await otpService.sendOtp(normalizedPhone, otpRecord.code, 'LOGIN');
+    const otpRecord = await emailService.createOtp(normalizedEmail, 'LOGIN', user.id);
+    await emailService.sendOtp(normalizedEmail, otpRecord.code, 'LOGIN', user.name);
 
     res.json({
-      message: 'OTP sent successfully',
-      phone: normalizedPhone,
+      message: 'OTP sent successfully to your email',
+      email: normalizedEmail,
       expiresAt: otpRecord.expiresAt
     });
   } catch (error) {
@@ -71,28 +62,21 @@ export const sendLoginOtp = async (req, res) => {
 // Verify OTP and login
 export const verifyLoginOtp = async (req, res) => {
   try {
-    const { phone, otp } = req.body;
+    const { email, otp } = req.body;
 
-    if (!phone || !otp) {
-      return res.status(400).json({ message: 'Phone number and OTP are required' });
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email address and OTP are required' });
     }
 
-    // Clean and normalize phone number
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    let normalizedPhone = cleanPhone;
-    if (normalizedPhone.startsWith('+91')) {
-      normalizedPhone = normalizedPhone.substring(3);
-    } else if (normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    normalizedPhone = '+91' + normalizedPhone;
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Verify OTP
-    await otpService.verifyOtp(normalizedPhone, otp, 'LOGIN');
+    await emailService.verifyOtp(normalizedEmail, otp, 'LOGIN');
 
     // Get user
     const user = await prisma.user.findUnique({ 
-      where: { phone: normalizedPhone },
+      where: { email: normalizedEmail },
       select: {
         id: true,
         name: true,
@@ -116,11 +100,20 @@ export const verifyLoginOtp = async (req, res) => {
       });
     }
 
+    // Mark user as verified if not already
+    if (!user.isVerified) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { isVerified: true }
+      });
+      user.isVerified = true;
+    }
+
     // Generate tokens
     const accessToken = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' } // Extended to 24 hours for better UX
+      { expiresIn: '24h' }
     );
 
     const refreshToken = jwt.sign(
@@ -163,47 +156,40 @@ export const verifyLoginOtp = async (req, res) => {
 // Send OTP for signup
 export const sendSignupOtp = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { email } = req.body;
 
-    if (!phone) {
-      return res.status(400).json({ message: 'Phone number is required' });
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required' });
     }
 
-    // Clean and validate phone number
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    const phoneRegex = /^(\+91|91)?[6-9]\d{9}$/;
-    if (!phoneRegex.test(cleanPhone)) {
-      return res.status(400).json({ message: 'Invalid phone number format. Please enter a valid Indian mobile number.' });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format. Please enter a valid email address.' });
     }
 
-    // Normalize phone number
-    let normalizedPhone = cleanPhone;
-    if (normalizedPhone.startsWith('+91')) {
-      normalizedPhone = normalizedPhone.substring(3);
-    } else if (normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    normalizedPhone = '+91' + normalizedPhone;
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 
-      where: { phone: normalizedPhone } 
+      where: { email: normalizedEmail } 
     });
     
     if (existingUser) {
       return res.status(400).json({ 
-        message: 'User already exists with this phone number. Please login instead.',
+        message: 'User already exists with this email address. Please login instead.',
         code: 'USER_EXISTS'
       });
     }
 
     // Generate and send OTP
-    const otpRecord = await otpService.createOtp(normalizedPhone, 'SIGNUP');
-    await otpService.sendOtp(normalizedPhone, otpRecord.code, 'SIGNUP');
+    const otpRecord = await emailService.createOtp(normalizedEmail, 'SIGNUP');
+    await emailService.sendOtp(normalizedEmail, otpRecord.code, 'SIGNUP');
 
     res.json({
-      message: 'OTP sent successfully',
-      phone: normalizedPhone,
+      message: 'OTP sent successfully to your email',
+      email: normalizedEmail,
       expiresAt: otpRecord.expiresAt
     });
   } catch (error) {
@@ -220,44 +206,37 @@ export const verifySignupOtp = async (req, res) => {
   try {
     const { name, email, phone, otp, role = 'USER' } = req.body;
 
-    if (!name || !phone || !otp) {
-      return res.status(400).json({ message: 'Name, phone number and OTP are required' });
+    if (!name || !email || !otp) {
+      return res.status(400).json({ message: 'Name, email address and OTP are required' });
     }
 
-    // Clean and normalize phone number
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    let normalizedPhone = cleanPhone;
-    if (normalizedPhone.startsWith('+91')) {
-      normalizedPhone = normalizedPhone.substring(3);
-    } else if (normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    normalizedPhone = '+91' + normalizedPhone;
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
     // Verify OTP
-    await otpService.verifyOtp(normalizedPhone, otp, 'SIGNUP');
+    await emailService.verifyOtp(normalizedEmail, otp, 'SIGNUP');
 
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({ 
-      where: { phone: normalizedPhone } 
+      where: { email: normalizedEmail } 
     });
     
     if (existingUser) {
       return res.status(400).json({ 
-        message: 'User already exists with this phone number',
+        message: 'User already exists with this email address',
         code: 'USER_EXISTS'
       });
     }
 
-    // Check email uniqueness if provided
-    if (email && email.trim()) {
-      const existingEmailUser = await prisma.user.findUnique({ 
-        where: { email: email.trim().toLowerCase() } 
+    // Check phone uniqueness if provided
+    if (phone && phone.trim()) {
+      const existingPhoneUser = await prisma.user.findUnique({ 
+        where: { phone: phone.trim() } 
       });
-      if (existingEmailUser) {
+      if (existingPhoneUser) {
         return res.status(400).json({ 
-          message: 'Email already in use',
-          code: 'EMAIL_EXISTS'
+          message: 'Phone number already in use',
+          code: 'PHONE_EXISTS'
         });
       }
     }
@@ -266,8 +245,8 @@ export const verifySignupOtp = async (req, res) => {
     const user = await prisma.user.create({
       data: {
         name: name.trim(),
-        email: email && email.trim() ? email.trim().toLowerCase() : null,
-        phone: normalizedPhone,
+        email: normalizedEmail,
+        phone: phone && phone.trim() ? phone.trim() : null,
         role: role.toUpperCase(),
         isVerified: true
       }
@@ -302,6 +281,128 @@ export const verifySignupOtp = async (req, res) => {
     });
   } catch (error) {
     console.error('Verify signup OTP error:', error);
+    
+    if (error.message === 'Invalid or expired OTP') {
+      return res.status(400).json({ 
+        message: 'Invalid or expired OTP. Please try again.',
+        code: 'INVALID_OTP'
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error. Please try again later.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Send forgot password OTP
+export const sendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email address is required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ 
+      where: { email: normalizedEmail } 
+    });
+    
+    if (!user) {
+      return res.status(404).json({ 
+        message: 'No account found with this email address',
+        code: 'USER_NOT_FOUND'
+      });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({ 
+        message: 'Your account has been blocked. Please contact support.',
+        code: 'ACCOUNT_BLOCKED'
+      });
+    }
+
+    // Generate and send OTP
+    const otpRecord = await emailService.createOtp(normalizedEmail, 'FORGOT_PASSWORD', user.id);
+    await emailService.sendOtp(normalizedEmail, otpRecord.code, 'FORGOT_PASSWORD', user.name);
+
+    res.json({
+      message: 'Password reset OTP sent successfully to your email',
+      email: normalizedEmail,
+      expiresAt: otpRecord.expiresAt
+    });
+  } catch (error) {
+    console.error('Send forgot password OTP error:', error);
+    res.status(500).json({ 
+      message: 'Server error. Please try again later.', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
+  }
+};
+
+// Verify forgot password OTP
+export const verifyForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email address and OTP are required' });
+    }
+
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Verify OTP
+    await emailService.verifyOtp(normalizedEmail, otp, 'FORGOT_PASSWORD');
+
+    // Get user
+    const user = await prisma.user.findUnique({ 
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        isBlocked: true
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isBlocked) {
+      return res.status(403).json({ 
+        message: 'Your account has been blocked. Please contact support.',
+        code: 'ACCOUNT_BLOCKED'
+      });
+    }
+
+    // Generate a temporary token for password reset
+    const resetToken = jwt.sign(
+      { userId: user.id, type: 'password_reset' },
+      process.env.JWT_SECRET,
+      { expiresIn: '15m' } // Short expiry for security
+    );
+
+    res.json({
+      success: true,
+      message: 'OTP verified successfully',
+      resetToken,
+      userId: user.id
+    });
+  } catch (error) {
+    console.error('Verify forgot password OTP error:', error);
     
     if (error.message === 'Invalid or expired OTP') {
       return res.status(400).json({ 
@@ -367,30 +468,23 @@ export const refreshToken = async (req, res) => {
 // Resend OTP
 export const resendOtp = async (req, res) => {
   try {
-    const { phone, type } = req.body;
+    const { email, type } = req.body;
 
-    if (!phone || !type) {
-      return res.status(400).json({ message: 'Phone number and type are required' });
+    if (!email || !type) {
+      return res.status(400).json({ message: 'Email address and type are required' });
     }
 
-    if (!['LOGIN', 'SIGNUP'].includes(type)) {
+    if (!['LOGIN', 'SIGNUP', 'FORGOT_PASSWORD'].includes(type)) {
       return res.status(400).json({ message: 'Invalid OTP type' });
     }
 
-    // Clean and normalize phone number
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, '');
-    let normalizedPhone = cleanPhone;
-    if (normalizedPhone.startsWith('+91')) {
-      normalizedPhone = normalizedPhone.substring(3);
-    } else if (normalizedPhone.startsWith('91')) {
-      normalizedPhone = normalizedPhone.substring(2);
-    }
-    normalizedPhone = '+91' + normalizedPhone;
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
 
-    // For login, check if user exists
-    if (type === 'LOGIN') {
+    // For login and forgot password, check if user exists
+    if (type === 'LOGIN' || type === 'FORGOT_PASSWORD') {
       const user = await prisma.user.findUnique({ 
-        where: { phone: normalizedPhone } 
+        where: { email: normalizedEmail } 
       });
       if (!user) {
         return res.status(404).json({ 
@@ -409,7 +503,7 @@ export const resendOtp = async (req, res) => {
     // For signup, check if user doesn't exist
     if (type === 'SIGNUP') {
       const existingUser = await prisma.user.findUnique({ 
-        where: { phone: normalizedPhone } 
+        where: { email: normalizedEmail } 
       });
       if (existingUser) {
         return res.status(400).json({ 
@@ -420,12 +514,15 @@ export const resendOtp = async (req, res) => {
     }
 
     // Generate and send new OTP
-    const otpRecord = await otpService.createOtp(normalizedPhone, type);
-    await otpService.sendOtp(normalizedPhone, otpRecord.code, type);
+    const otpRecord = await emailService.createOtp(normalizedEmail, type);
+    const userName = type !== 'SIGNUP' ? 
+      (await prisma.user.findUnique({ where: { email: normalizedEmail } }))?.name : '';
+    
+    await emailService.sendOtp(normalizedEmail, otpRecord.code, type, userName);
 
     res.json({
-      message: 'OTP resent successfully',
-      phone: normalizedPhone,
+      message: 'OTP resent successfully to your email',
+      email: normalizedEmail,
       expiresAt: otpRecord.expiresAt
     });
   } catch (error) {

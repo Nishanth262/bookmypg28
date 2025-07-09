@@ -25,7 +25,6 @@ const RegisterPage: React.FC = () => {
     role: 'USER'
   })
   const [otp, setOtp] = useState('')
-  const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(0)
   
   const { 
@@ -35,8 +34,10 @@ const RegisterPage: React.FC = () => {
     isLoading, 
     isAuthenticated, 
     otpSent, 
-    otpPhone,
-    clearOtpState
+    otpEmail,
+    error,
+    clearOtpState,
+    clearError
   } = useAuthStore()
   
   const navigate = useNavigate()
@@ -57,22 +58,13 @@ const RegisterPage: React.FC = () => {
     return () => clearTimeout(timer)
   }, [countdown])
 
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '')
-    
-    // Add country code if not present
-    if (digits.length > 0 && !digits.startsWith('91')) {
-      return '+91' + digits
-    } else if (digits.startsWith('91')) {
-      return '+' + digits
-    }
-    
-    return digits
-  }
+  useEffect(() => {
+    return () => clearError()
+  }, [clearError])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
+    clearError()
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -81,44 +73,34 @@ const RegisterPage: React.FC = () => {
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    clearError()
     
     if (!formData.name.trim()) {
-      setError('Please enter your full name')
       return
     }
     
-    if (!formData.phone) {
-      setError('Please enter your phone number')
+    if (!formData.email) {
       return
     }
-    
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      setError('Please enter a valid email address')
-      return
-    }
-    
-    const formattedPhone = formatPhoneNumber(formData.phone)
     
     try {
-      await sendSignupOtp(formattedPhone)
+      await sendSignupOtp(formData.email)
       setCountdown(60) // Start 60 second countdown
     } catch (error: any) {
-      setError(error.message || 'Failed to send OTP')
+      // Error is handled by the store
+      console.error('Signup OTP error:', error)
     }
   }
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    clearError()
     
     if (!otp) {
-      setError('Please enter the OTP')
       return
     }
     
     if (otp.length !== 6) {
-      setError('OTP must be 6 digits')
       return
     }
     
@@ -126,32 +108,34 @@ const RegisterPage: React.FC = () => {
       await verifySignupOtp(
         formData.name.trim(),
         formData.email.trim(),
-        otpPhone!,
+        formData.phone.trim(),
         otp,
         formData.role
       )
       navigate('/')
     } catch (error: any) {
-      setError(error.message || 'Invalid OTP')
+      // Error is handled by the store
+      console.error('Verify signup OTP error:', error)
     }
   }
 
   const handleResendOtp = async () => {
     if (countdown > 0) return
     
-    setError('')
+    clearError()
     try {
-      await resendOtp(otpPhone!, 'SIGNUP')
+      await resendOtp(otpEmail!, 'SIGNUP')
       setCountdown(60)
     } catch (error: any) {
-      setError(error.message || 'Failed to resend OTP')
+      // Error is handled by the store
+      console.error('Resend OTP error:', error)
     }
   }
 
   const handleBack = () => {
     clearOtpState()
     setOtp('')
-    setError('')
+    clearError()
   }
 
   return (
@@ -181,7 +165,7 @@ const RegisterPage: React.FC = () => {
               </h1>
               <p className="text-gray-600">
                 {otpSent 
-                  ? `Enter the 6-digit code sent to ${otpPhone}`
+                  ? `Enter the 6-digit code sent to ${otpEmail}`
                   : 'Join BookMyPG to find your perfect accommodation'
                 }
               </p>
@@ -220,7 +204,7 @@ const RegisterPage: React.FC = () => {
 
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                      Email Address (Optional)
+                      Email Address *
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -230,17 +214,18 @@ const RegisterPage: React.FC = () => {
                         id="email"
                         name="email"
                         type="email"
-                        placeholder="Enter your email"
+                        placeholder="Enter your email address"
                         value={formData.email}
                         onChange={handleInputChange}
                         className="pl-10"
+                        required
                       />
                     </div>
                   </div>
                   
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number *
+                      Phone Number (Optional)
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -254,7 +239,6 @@ const RegisterPage: React.FC = () => {
                         value={formData.phone}
                         onChange={handleInputChange}
                         className="pl-10"
-                        required
                       />
                     </div>
                   </div>
@@ -283,7 +267,7 @@ const RegisterPage: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={isLoading}
+                    disabled={isLoading || !formData.name.trim() || !formData.email}
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
@@ -312,12 +296,20 @@ const RegisterPage: React.FC = () => {
                         type="text"
                         placeholder="Enter 6-digit code"
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onChange={(e) => {
+                          clearError()
+                          setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))
+                        }}
                         className="pl-10 text-center text-lg tracking-widest"
                         maxLength={6}
                         required
                       />
                     </div>
+                    {process.env.NODE_ENV === 'development' && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        Development mode: Check your email for OTP
+                      </p>
+                    )}
                   </div>
                   
                   <div className="flex space-x-3">

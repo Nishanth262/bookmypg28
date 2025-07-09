@@ -1,35 +1,42 @@
 import { z } from 'zod';
 
-const phoneSchema = z.object({
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must not exceed 15 digits')
-    .regex(/^[+]?[1-9]\d{1,14}$/, 'Invalid phone number format')
+const emailSchema = z.object({
+  email: z.string()
+    .email('Invalid email format')
+    .min(5, 'Email must be at least 5 characters')
+    .max(100, 'Email must not exceed 100 characters')
+    .transform(email => email.toLowerCase().trim())
 });
 
-const otpSchema = z.object({
-  phone: z.string()
-    .min(10, 'Phone number must be at least 10 digits')
-    .max(15, 'Phone number must not exceed 15 digits')
-    .regex(/^[+]?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+const emailOtpSchema = z.object({
+  email: z.string()
+    .email('Invalid email format')
+    .min(5, 'Email must be at least 5 characters')
+    .max(100, 'Email must not exceed 100 characters')
+    .transform(email => email.toLowerCase().trim()),
   otp: z.string()
     .length(6, 'OTP must be 6 digits')
     .regex(/^\d{6}$/, 'OTP must contain only digits')
+    .optional()
 });
 
 const signupSchema = z.object({
   name: z.string()
     .min(2, 'Name must be at least 2 characters')
     .max(50, 'Name must not exceed 50 characters')
-    .regex(/^[a-zA-Z\s]+$/, 'Name must contain only letters and spaces'),
+    .regex(/^[a-zA-Z\s]+$/, 'Name must contain only letters and spaces')
+    .transform(name => name.trim()),
   email: z.string()
     .email('Invalid email format')
-    .optional()
-    .or(z.literal('')),
+    .min(5, 'Email must be at least 5 characters')
+    .max(100, 'Email must not exceed 100 characters')
+    .transform(email => email.toLowerCase().trim()),
   phone: z.string()
     .min(10, 'Phone number must be at least 10 digits')
     .max(15, 'Phone number must not exceed 15 digits')
-    .regex(/^[+]?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+    .regex(/^[+]?[1-9]\d{1,14}$/, 'Invalid phone number format')
+    .optional()
+    .or(z.literal('')),
   otp: z.string()
     .length(6, 'OTP must be 6 digits')
     .regex(/^\d{6}$/, 'OTP must contain only digits'),
@@ -67,9 +74,9 @@ const bookingSchema = z.object({
   durationMonths: z.number().min(1).max(12)
 });
 
-export const validatePhone = (req, res, next) => {
+export const validateEmail = (req, res, next) => {
   try {
-    phoneSchema.parse(req.body);
+    emailSchema.parse(req.body);
     next();
   } catch (error) {
     res.status(400).json({ 
@@ -79,14 +86,14 @@ export const validatePhone = (req, res, next) => {
   }
 };
 
-export const validatePhoneOtp = (req, res, next) => {
+export const validateEmailOtp = (req, res, next) => {
   try {
-    // For send OTP requests, only validate phone
+    // For send OTP requests, only validate email
     if (req.path.includes('send-otp') || req.path.includes('resend-otp')) {
-      phoneSchema.parse(req.body);
+      emailSchema.parse(req.body);
     } else {
-      // For verify OTP requests, validate both phone and OTP
-      otpSchema.parse(req.body);
+      // For verify OTP requests, validate both email and OTP
+      emailOtpSchema.parse(req.body);
     }
     next();
   } catch (error) {

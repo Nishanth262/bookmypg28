@@ -6,10 +6,10 @@ import { Header } from '../components/layout/Header'
 import { Footer } from '../components/layout/Footer'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Phone, Shield, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react'
+import { Mail, Shield, AlertCircle, ArrowLeft, RotateCcw } from 'lucide-react'
 
 const LoginPage: React.FC = () => {
-  const [phone, setPhone] = useState('')
+  const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [countdown, setCountdown] = useState(0)
   
@@ -20,7 +20,7 @@ const LoginPage: React.FC = () => {
     isLoading, 
     isAuthenticated, 
     otpSent, 
-    otpPhone,
+    otpEmail,
     error,
     clearOtpState,
     clearError
@@ -49,38 +49,16 @@ const LoginPage: React.FC = () => {
     return () => clearError()
   }, [clearError])
 
-  const formatPhoneNumber = (value: string) => {
-    // Remove all non-digits
-    const digits = value.replace(/\D/g, '')
-    
-    // Limit to 10 digits for Indian mobile numbers
-    const limitedDigits = digits.slice(0, 10)
-    
-    // Add country code if not present and we have 10 digits
-    if (limitedDigits.length === 10 && limitedDigits.startsWith('6789'.charAt(0))) {
-      return '+91' + limitedDigits
-    }
-    
-    return limitedDigits
-  }
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     clearError()
     
-    if (!phone) {
-      return
-    }
-    
-    const formattedPhone = formatPhoneNumber(phone)
-    
-    // Validate phone number
-    if (formattedPhone.length < 10) {
+    if (!email) {
       return
     }
     
     try {
-      await sendLoginOtp(formattedPhone)
+      await sendLoginOtp(email)
       setCountdown(60) // Start 60 second countdown
     } catch (error: any) {
       // Error is handled by the store
@@ -97,7 +75,7 @@ const LoginPage: React.FC = () => {
     }
     
     try {
-      await verifyLoginOtp(otpPhone!, otp)
+      await verifyLoginOtp(otpEmail!, otp)
       navigate('/')
     } catch (error: any) {
       // Error is handled by the store
@@ -110,7 +88,7 @@ const LoginPage: React.FC = () => {
     
     clearError()
     try {
-      await resendOtp(otpPhone!, 'LOGIN')
+      await resendOtp(otpEmail!, 'LOGIN')
       setCountdown(60)
     } catch (error: any) {
       // Error is handled by the store
@@ -124,10 +102,9 @@ const LoginPage: React.FC = () => {
     clearError()
   }
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     clearError()
-    const value = e.target.value.replace(/\D/g, '').slice(0, 10)
-    setPhone(value)
+    setEmail(e.target.value)
   }
 
   const handleOtpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,7 +140,7 @@ const LoginPage: React.FC = () => {
               </h1>
               <p className="text-gray-600">
                 {otpSent 
-                  ? `Enter the 6-digit code sent to ${otpPhone}`
+                  ? `Enter the 6-digit code sent to ${otpEmail}`
                   : 'Sign in to access your BookMyPG account'
                 }
               </p>
@@ -180,24 +157,20 @@ const LoginPage: React.FC = () => {
               <form onSubmit={handleSendOtp}>
                 <div className="space-y-6">
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone Number
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Phone className="h-5 w-5 text-gray-400" />
-                      </div>
-                      <div className="absolute inset-y-0 left-10 flex items-center pointer-events-none">
-                        <span className="text-gray-500 text-sm">+91</span>
+                        <Mail className="h-5 w-5 text-gray-400" />
                       </div>
                       <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Enter 10-digit mobile number"
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        className="pl-16"
-                        maxLength={10}
+                        id="email"
+                        type="email"
+                        placeholder="Enter your email address"
+                        value={email}
+                        onChange={handleEmailChange}
+                        className="pl-10"
                         required
                       />
                     </div>
@@ -209,7 +182,7 @@ const LoginPage: React.FC = () => {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={isLoading || phone.length < 10}
+                    disabled={isLoading || !email}
                   >
                     {isLoading ? (
                       <div className="flex items-center justify-center">
@@ -246,7 +219,7 @@ const LoginPage: React.FC = () => {
                     </div>
                     {process.env.NODE_ENV === 'development' && (
                       <p className="text-xs text-blue-600 mt-1">
-                        Development mode: Check console for OTP
+                        Development mode: Check your email for OTP
                       </p>
                     )}
                   </div>
@@ -304,6 +277,11 @@ const LoginPage: React.FC = () => {
                 Don't have an account?{' '}
                 <Link to="/register" className="text-primary-600 hover:text-primary-500 font-medium">
                   Sign up
+                </Link>
+              </p>
+              <p className="text-gray-600 mt-2">
+                <Link to="/forgot-password" className="text-primary-600 hover:text-primary-500 font-medium text-sm">
+                  Forgot your password?
                 </Link>
               </p>
             </div>

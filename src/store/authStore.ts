@@ -6,19 +6,20 @@ interface AuthState {
   isAuthenticated: boolean
   isLoading: boolean
   otpSent: boolean
-  otpPhone: string | null
+  otpEmail: string | null
   error: string | null
-  sendLoginOtp: (phone: string) => Promise<void>
-  verifyLoginOtp: (phone: string, otp: string) => Promise<void>
-  sendSignupOtp: (phone: string) => Promise<void>
+  sendLoginOtp: (email: string) => Promise<void>
+  verifyLoginOtp: (email: string, otp: string) => Promise<void>
+  sendSignupOtp: (email: string) => Promise<void>
   verifySignupOtp: (name: string, email: string, phone: string, otp: string, role?: string) => Promise<void>
-  resendOtp: (phone: string, type: 'LOGIN' | 'SIGNUP') => Promise<void>
+  sendForgotPasswordOtp: (email: string) => Promise<void>
+  verifyForgotPasswordOtp: (email: string, otp: string) => Promise<{ resetToken: string; userId: string }>
+  resendOtp: (email: string, type: 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD') => Promise<void>
   logout: () => void
   clearOtpState: () => void
   clearError: () => void
 }
 
-const API_URL = "/api";
 const API_BASE_URL = '/api'
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -26,10 +27,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: false,
   otpSent: false,
-  otpPhone: null,
+  otpEmail: null,
   error: null,
   
-  sendLoginOtp: async (phone: string) => {
+  sendLoginOtp: async (email: string) => {
     set({ isLoading: true, error: null })
     
     try {
@@ -38,7 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       })
       
       const data = await response.json()
@@ -49,7 +50,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       set({ 
         otpSent: true, 
-        otpPhone: data.phone, 
+        otpEmail: data.email, 
         isLoading: false,
         error: null
       })
@@ -62,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  verifyLoginOtp: async (phone: string, otp: string) => {
+  verifyLoginOtp: async (email: string, otp: string) => {
     set({ isLoading: true, error: null })
     
     try {
@@ -71,7 +72,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone, otp }),
+        body: JSON.stringify({ email, otp }),
       })
       
       const data = await response.json()
@@ -85,7 +86,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true, 
         isLoading: false,
         otpSent: false,
-        otpPhone: null,
+        otpEmail: null,
         error: null
       })
       
@@ -101,7 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   
-  sendSignupOtp: async (phone: string) => {
+  sendSignupOtp: async (email: string) => {
     set({ isLoading: true, error: null })
     
     try {
@@ -110,7 +111,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       })
       
       const data = await response.json()
@@ -121,7 +122,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       set({ 
         otpSent: true, 
-        otpPhone: data.phone, 
+        otpEmail: data.email, 
         isLoading: false,
         error: null
       })
@@ -157,7 +158,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true, 
         isLoading: false,
         otpSent: false,
-        otpPhone: null,
+        otpEmail: null,
         error: null
       })
       
@@ -172,8 +173,76 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       throw error
     }
   },
+
+  sendForgotPasswordOtp: async (email: string) => {
+    set({ isLoading: true, error: null })
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password/send-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send OTP')
+      }
+      
+      set({ 
+        otpSent: true, 
+        otpEmail: data.email, 
+        isLoading: false,
+        error: null
+      })
+    } catch (error: any) {
+      set({ 
+        isLoading: false,
+        error: error.message || 'Failed to send OTP'
+      })
+      throw error
+    }
+  },
+
+  verifyForgotPasswordOtp: async (email: string, otp: string) => {
+    set({ isLoading: true, error: null })
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/forgot-password/verify-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Invalid OTP')
+      }
+      
+      set({ 
+        isLoading: false,
+        otpSent: false,
+        otpEmail: null,
+        error: null
+      })
+      
+      return { resetToken: data.resetToken, userId: data.userId }
+    } catch (error: any) {
+      set({ 
+        isLoading: false,
+        error: error.message || 'Invalid OTP'
+      })
+      throw error
+    }
+  },
   
-  resendOtp: async (phone: string, type: 'LOGIN' | 'SIGNUP') => {
+  resendOtp: async (email: string, type: 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD') => {
     set({ isLoading: true, error: null })
     
     try {
@@ -182,7 +251,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone, type }),
+        body: JSON.stringify({ email, type }),
       })
       
       const data = await response.json()
@@ -206,7 +275,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: null, 
       isAuthenticated: false,
       otpSent: false,
-      otpPhone: null,
+      otpEmail: null,
       error: null
     })
     localStorage.removeItem('user')
@@ -217,7 +286,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearOtpState: () => {
     set({ 
       otpSent: false, 
-      otpPhone: null,
+      otpEmail: null,
       error: null
     })
   },
